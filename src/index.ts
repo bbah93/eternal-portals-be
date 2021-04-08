@@ -55,6 +55,7 @@ import { firestore } from 'firebase-admin';
         email: String
         dob: String
         portal_url: String
+        avatar_url: String
         request_ids: [ID]
         friends: [Friends]
         portal: Portal
@@ -137,16 +138,21 @@ import { firestore } from 'firebase-admin';
     },
 
     Mutation: {
-      async updateUser(_: null, args: { user}){
+      async updateUser(_: null, args: {user}){
         try {
           const updatedUser = await admin
           .firestore()
           .collection('Users')
           .doc(args.user.id)
           .set(args.user);
+
           const user = {
             id: args.user.id,
-            firstname: args.user.firstname
+            firstname: args.user?.firstname,
+            lastname: args.user?.lastname,
+            dob: args.user?.dob,
+            avatar_url: args.user?.avatar_url
+
           }
           return user ;
         } catch(error){
