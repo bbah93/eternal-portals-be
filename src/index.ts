@@ -9,6 +9,7 @@ admin.initializeApp({
 
   import { ApolloServer, ApolloError, ValidationError, gql } from 'apollo-server';
 import { firestore } from 'firebase-admin';
+import firebase from 'firebase';
 
 
   interface User {
@@ -103,9 +104,16 @@ import { firestore } from 'firebase-admin';
       # getFriends(id: User!): Friends
     }
 
+    type File {
+      filename: String
+      mimetype: String
+      filesize: Int
+      url: String
+  }
+
     type Mutation {
       updateUser(user: UserInput ): User
-
+      uploadAvatar(file: Upload!): File
       # addUser(user: User!): User
       # addPortal(portal: Portal!): Portal
       # updatePortal(portal: Portal!): Portal
@@ -159,10 +167,48 @@ import { firestore } from 'firebase-admin';
           throw new ApolloError(error);
 
         }
-      }
-    }
+      },
 
-  };
+      async uploadAvatar(_: null, args: {file}){
+        try{
+          const storageRef = firebase.storage().ref();
+          const avatatRef = storageRef.child(`profile_images/${args.file.filename}`);
+
+          const uploadTask = avatatRef.put(args.file);
+          uploadTask.on( 'state_changed', 
+            (snapshot) => {
+             // Observe state change events such as progress, pause, and resume
+              // Get task progress, including the number of bytes uploaded and the total number of bytes to be uploaded
+              var progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+              console.log('Upload is ' + progress + '% done');
+              switch (snapshot.state) {
+                case firebase.storage.TaskState.PAUSED: // or 'paused'
+                  console.log('Upload is paused');
+                  break;
+                case firebase.storage.TaskState.RUNNING: // or 'running'
+                  console.log('Upload is running');
+                  break; 
+                      }
+                    },
+                    (error) => {
+                      // Handle unsuccessful uploads
+                    }, 
+                    () => {
+                      // Handle successful uploads on complete
+                      // For instance, get the download URL: https://firebasestorage.googleapis.com/...
+                      uploadTask.snapshot.ref.getDownloadURL().then((downloadURL) => {
+                        console.log('File available at', downloadURL);
+                      });
+                    } 
+                    );
+              } catch(error){
+                throw new ApolloError(error);
+
+              }
+          }
+        }
+
+      };
 
   const server = new ApolloServer({
   typeDefs,
